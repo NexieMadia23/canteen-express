@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="{% static 'customer_portal/images/canteen-express-logo.png' %}" type="image/png" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Onboarding - Step 2: Phone</title>
+    <link rel="stylesheet" href="{% static 'css/default.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-zinc-900 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 relative z-10">
+        <!-- Progress Bar -->
+        <div class="space-y-2">
+            <div class="flex justify-between text-xs font-extrabold text-zinc-400 uppercase tracking-wider">
+                <span class="text-orange-600">Step 2 of 5</span>
+                <span>Phone Input</span>
+            </div>
+            <div class="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+                <div class="bg-orange-500 h-full w-2/5"></div>
+            </div>
+        </div>
+
+        <div class="text-center space-y-2">
+            <div class="w-16 h-16 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                <i class="fa-solid fa-mobile-screen-button text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black text-zinc-900">Phone Number</h2>
+            <p class="text-xs text-zinc-500 leading-relaxed">We will send a 6-digit verification OTP code to your mobile number.</p>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-xs font-extrabold text-zinc-700 uppercase tracking-wider mb-1">Mobile Number</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-500 text-xs font-bold">+63</span>
+                    <input type="tel" name="phone_number" required placeholder="9123456789" maxlength="10"
+                        class="w-full pl-12 pr-4 py-3 border border-zinc-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:outline-none text-xs text-zinc-800 font-bold">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl shadow-lg shadow-orange-500/25 transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer relative z-20">
+                <span>Send OTP Code</span>
+                <i class="fa-solid fa-paper-plane text-xs"></i>
+            </button>
+        </form>
+
+        <div class="text-center pt-2 border-t border-zinc-100">
+            <a href="{% url 'accounts:faculty_location' %}" class="text-xs font-bold text-zinc-400 hover:text-zinc-700 transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Back
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

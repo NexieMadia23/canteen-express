@@ -1,0 +1,186 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="icon" href="{% static 'customer_portal/images/canteen-express-logo.png' %}" type="image/png" />
+    {% if '/deliveries' in request.path or user.role|upper == 'DELIVERY' or user.role|upper == 'RIDER' %}
+    <link rel="manifest" href="{% static 'manifest-rider.json' %}">
+    {% elif '/accounts/faculty' in request.path or user.role|upper == 'FACULTY' %}
+    <link rel="manifest" href="{% static 'manifest-faculty.json' %}">
+    {% elif '/kiosk' in request.path or user.role|upper == 'STUDENT' or not user.is_authenticated %}
+    <link rel="manifest" href="{% static 'manifest-kiosk.json' %}">
+    {% else %}
+    <link rel="manifest" href="{% static 'manifest-staff.json' %}">
+    {% endif %}
+    <meta name="theme-color" content="#f97316">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{% static 'sw.js' %}").catch(err => console.log('SW error:', err));
+            });
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>[x-cloak] { display: none !important; }</style>
+    <title>{% block title %}Canteen Express{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316', // Primary Orange
+                            600: '#ea580c', // Hover Orange
+                            700: '#c2410c',
+                        },
+                        dark: {
+                            800: '#1e293b',
+                            900: '#0f172a', // Charcoal Black
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex flex-col pb-20 md:pb-0">
+
+    <!-- Top Navigation Header -->
+    {% block header %}
+    <header class="bg-black text-white sticky top-0 z-40 shadow-lg border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+           {% if not user.is_authenticated %}
+           <a href="{% url 'customer_portal:kiosk_menu' %}" class="flex items-center space-x-2.5">
+           {% elif user.role|upper == 'STAFF' or user.role|upper == 'ADMIN' or user.is_staff %}
+           <a href="{% url 'canteen_menu:staff_dashboard' %}" class="flex items-center space-x-2.5">
+            {% elif user.role|upper == 'DELIVERY' or user.role|upper == 'RIDER' %}
+           <a href="{% url 'deliveries:dashboard' %}" class="flex items-center space-x-2.5">
+           {% else %}
+           <a href="{% url 'customer_portal:kiosk_menu' %}" class="flex items-center space-x-2.5">
+           {% endif %}
+                <img src="{% static 'logo.png' %}" alt="Logo" class="h-9 w-auto object-contain">
+                <span class="font-black text-xl tracking-tight text-white">
+                    Canteen<span class="text-brand-500">Express</span>
+                </span>
+            </a>
+
+            {% if user.is_authenticated %}
+                <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                    <button @click="open = !open" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-xl transition border border-white/15">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="hidden sm:inline">{{ user.get_full_name|default:user.username }}</span>
+                        <i class="fa-solid fa-chevron-down text-[9px] text-gray-400 transition" :class="open && 'rotate-180'"></i>
+                    </button>
+                    <div x-show="open" x-transition x-cloak class="absolute right-0 mt-2 w-52 bg-black border border-zinc-800 rounded-2xl shadow-2xl py-2 z-50 origin-top-right">
+                        <a href="{% url 'canteen_menu:staff_dashboard' %}" class="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/10 text-white text-xs font-bold transition">
+                            <i class="fa-solid fa-gauge-high text-brand-500"></i> Staff Dashboard
+                        </a>
+                        <div class="border-t border-zinc-800 my-1"></div>
+                        <a href="{% url 'accounts:logout' %}" class="flex items-center gap-2.5 px-4 py-2.5 hover:bg-red-500/20 text-red-400 text-xs font-bold transition">
+                            <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <a href="{% url 'accounts:landing' %}" class="bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition shadow-md shadow-brand-500/20">
+                    Get Started
+                </a>
+            {% endif %}
+        </div>
+    </header>
+    {% endblock %}
+
+    <!-- Django Messages (Floating Toast - does not occupy space in layout flow) -->
+    {% if messages %}
+    <div class="fixed top-6 right-6 z-50 space-y-2 max-w-sm w-full pointer-events-none" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)">
+        {% for message in messages %}
+        <div class="pointer-events-auto p-4 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-md transition
+            {% if message.tags == 'error' %}
+                bg-red-900/95 text-white border border-red-700
+            {% else %}
+                bg-emerald-900/95 text-white border border-emerald-700
+            {% endif %} flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation text-red-300{% else %}fa-circle-check text-emerald-300{% endif %} text-base"></i>
+                <span>{{ message }}</span>
+            </div>
+            <button @click="show = false" class="text-white/70 hover:text-white font-bold text-sm">&times;</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="flex-grow {% block main_class %}max-w-7xl w-full mx-auto p-4{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar (Black & Orange) -->
+    {% if user.is_authenticated %}
+    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 z-50 md:hidden shadow-2xl">
+        <div class="flex justify-around items-center py-2.5">
+            {% if user.role|upper == 'STAFF' or user.role|upper == 'ADMIN' or user.is_staff %}
+            <a href="{% url 'canteen_menu:staff_dashboard' %}" class="flex flex-col items-center text-brand-500 font-bold text-xs">
+                <i class="fa-solid fa-gauge-high text-lg mb-1"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'kitchen_display:kitchen_board' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-fire-burner text-lg mb-1"></i>
+                <span>Kitchen</span>
+            </a>
+            <a href="{% url 'canteen_menu:counter_pos' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-barcode text-lg mb-1"></i>
+                <span>POS</span>
+            </a>
+            <a href="{% url 'accounts:staff_logout' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-right-from-bracket text-lg mb-1"></i>
+                <span>Logout</span>
+            </a>
+           {% elif user.role|upper == 'DELIVERY' or user.role|upper == 'RIDER' %}
+            <a href="{% url 'deliveries:dashboard' %}" class="flex flex-col items-center text-brand-500 font-bold text-xs">
+                <i class="fa-solid fa-gauge-high text-lg mb-1"></i>
+                <span>Dispatch</span>
+            </a>
+            <a href="{% url 'deliveries:history' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i>
+                <span>History</span>
+            </a>
+            <a href="{% url 'accounts:delivery_logout' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-right-from-bracket text-lg mb-1"></i>
+                <span>Logout</span>
+            </a>
+            {% else %}
+            <a href="{% url 'customer_portal:kiosk_menu' %}" class="flex flex-col items-center text-brand-500 font-bold text-xs">
+                <i class="fa-solid fa-utensils text-lg mb-1"></i>
+                <span>Menu</span>
+            </a>
+            <a href="{% url 'customer_portal:kiosk_welcome' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-house text-lg mb-1"></i>
+                <span>Home</span>
+            </a>
+            <a href="{% url 'accounts:faculty_logout' %}" class="flex flex-col items-center text-gray-400 hover:text-brand-500 text-xs font-medium">
+                <i class="fa-solid fa-right-from-bracket text-lg mb-1"></i>
+                <span>Logout</span>
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+
+</body>
+</html>

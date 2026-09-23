@@ -1,0 +1,188 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env at mag-print ng diagnostic info (override=True so .env takes precedence)
+env_file = BASE_DIR / ".env"
+dotenv_loaded = load_dotenv(env_file, override=True)
+
+print("\n" + "="*40)
+print(f"Checking .env path: {env_file}")
+print(f"File exists: {env_file.exists()}")
+print(f"DB_PASSWORD Loaded: {'YES' if os.getenv('DB_PASSWORD') else 'NO (Empty/None)'}")
+geofence_status = os.getenv('ENFORCE_GEOFENCE', 'True').lower() == 'true'
+print(f"Geofence Enforcement: {'ENABLED (Strict Campus Radius)' if geofence_status else 'DISABLED (Testing Anywhere Mode)'}")
+print("="*40 + "\n")
+
+# Quick-start development settings - unsuitable for production
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-local-dev-key")
+
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t", "yes")
+
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com', '*']
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+# Application definition
+
+INSTALLED_APPS = [
+    # Django Core Apps
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    # Local Canteen Express Apps
+    'accounts',
+    'customer_portal',
+    'canteen_menu',
+    'order_management',
+    'queuing',
+    'deliveries',
+    'user_notifications',
+    'analytics_reports',
+    'admin_dashboard',
+    'kitchen_display',
+    'core_app',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'config.urls'
+
+# Role-aware post-login fallback (the dedicated role login views redirect explicitly,
+# this only guards the generic /accounts/login/ page from dumping users on a dead URL).
+LOGIN_REDIRECT_URL = 'accounts:landing'
+LOGIN_URL = 'accounts:staff_login'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'config.wsgi.application'
+
+
+# Database (Strict Supabase PostgreSQL + SQLite backup source with automatic fallback)
+USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() == 'true'
+db_host = os.getenv('DB_HOST', '')
+
+if USE_SQLITE or not db_host:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'postgres'),
+            'USER': os.getenv('DB_USER', ''),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', ''),
+            'PORT': os.getenv('DB_PORT', '6543'),
+            'CONN_MAX_AGE': 600,
+            'OPTIONS': {
+                'sslmode': 'require',
+                'connect_timeout': 5,
+            },
+        },
+        'sqlite_backup': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Session Persistence Settings (Prevent Auto-Logout)
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+# Internationalization
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'Asia/Manila'
+
+USE_I18N = True
+
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Email Settings (Real-time SMTP Gmail SSL Port 465)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 465))
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'canteenexpress26@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'pwqhlcwxmkiizzwg')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Canteen Express <canteenexpress26@gmail.com>')
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://tiny-boats-win.loca.lt',
+    'https://*.loca.lt',
+    'https://*.devtunnels.ms',
+    'https://*.onrender.com',
+    'https://*.railway.app',
+    'https://*.localhost',
+]
+
+ENFORCE_GEOFENCE = os.getenv('ENFORCE_GEOFENCE', 'True').lower() == 'true'

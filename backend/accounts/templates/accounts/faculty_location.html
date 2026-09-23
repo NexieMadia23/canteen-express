@@ -1,0 +1,197 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="{% static 'customer_portal/images/canteen-express-logo.png' %}" type="image/png" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Onboarding - Location Verification</title>
+    <!-- Tailwind CSS CDN -->
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-poppins { font-family: 'Poppins', sans-serif; }
+
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes scroll-right {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+        }
+        .animate-scroll-1 {
+            display: flex;
+            width: 200%;
+            animation: scroll-left 42s linear infinite;
+        }
+        .animate-scroll-2 {
+            display: flex;
+            width: 200%;
+            animation: scroll-right 48s linear infinite;
+        }
+        .diagonal-wrapper {
+            transform: rotate(-12deg) scale(1.4);
+        }
+    </style>
+</head>
+<body class="bg-brand-dark text-white min-h-screen flex items-center justify-center p-3 relative overflow-hidden select-none">
+
+    <!-- ================= DIAGONAL BACKGROUND FOOD CAROUSEL ================= -->
+    <div class="absolute inset-0 z-0 pointer-events-none opacity-35 overflow-hidden flex flex-col justify-center gap-10 diagonal-wrapper">
+        <div class="animate-scroll-1 flex gap-6">
+            <div class="flex gap-6 shrink-0">
+                <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+            </div>
+            <div class="flex gap-6 shrink-0">
+                <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+            </div>
+        </div>
+        <div class="animate-scroll-2 flex gap-6">
+            <div class="flex gap-6 shrink-0">
+                <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+            </div>
+            <div class="flex gap-6 shrink-0">
+                <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+                <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=500&q=80" class="w-64 h-40 object-cover rounded-2xl shadow-xl border border-white/10">
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Gradient Overlay -->
+    <div class="absolute inset-0 bg-gradient-to-b from-brand-dark/80 via-brand-dark/75 to-brand-dark/90 z-0"></div>
+
+    <!-- Main Card Container -->
+    <div class="w-full max-w-md bg-[#121215]/90 border border-white/15 rounded-[28px] p-4 sm:p-5 space-y-3 relative z-10 backdrop-blur-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] ring-1 ring-white/10">
+        
+        <!-- Header -->
+        <div class="text-center space-y-1">
+            <div class="w-12 h-12 bg-brand-orange/20 border border-brand-orange/40 text-brand-orange rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-brand-orange/20 text-lg">
+                <i class="fa-solid fa-location-crosshairs"></i>
+            </div>
+            <h2 class="text-xl font-black text-white font-poppins">Delivery Location Check</h2>
+            <p class="text-[11px] text-white/70 leading-snug max-w-xs mx-auto">We verify your location to ensure seamless campus office deliveries.</p>
+        </div>
+
+        <!-- Form -->
+        <form method="POST" id="location-form" class="space-y-3">
+            {% csrf_token %}
+            
+            <input type="hidden" name="latitude" id="latitude" value="9.77778">
+            <input type="hidden" name="longitude" id="longitude" value="118.73333">
+
+            <!-- Status Box -->
+            <div id="status-box" class="p-3 bg-white/5 border border-white/15 rounded-2xl text-center transition-all duration-300">
+                <i id="status-icon" class="fa-solid fa-map-pin text-2xl text-brand-orange mb-1"></i>
+                <p id="status-text" class="text-xs font-semibold text-white/80">Click below to allow and detect your location.</p>
+            </div>
+
+            <!-- Action Button -->
+            <button type="button" id="detect-btn" onclick="getLocation()" class="w-full py-3 bg-brand-orange hover:bg-orange-600 text-white font-black rounded-2xl shadow-xl shadow-brand-orange/30 transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer relative z-20 font-poppins">
+                <i class="fa-solid fa-crosshairs"></i>
+                <span>Allow & Detect Location</span>
+            </button>
+
+            <!-- Submit Button (Hidden initially until location is obtained) -->
+            <button type="submit" id="next-btn" class="hidden w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-emerald-600/30 transition text-xs uppercase tracking-wider items-center justify-center gap-2 cursor-pointer relative z-25 font-poppins">
+                <span>Continue to Sign in / Sign up</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="text-center pt-1 border-t border-white/10">
+            <a href="{% url 'accounts:landing' %}" class="text-xs font-bold text-white/60 hover:text-white transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-arrow-left"></i> Back to Role Selection
+            </a>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedLat = localStorage.getItem('canteen_faculty_lat');
+            const savedLng = localStorage.getItem('canteen_faculty_lng');
+            if (savedLat && savedLng) {
+                setCoordinates(parseFloat(savedLat), parseFloat(savedLng), true);
+            }
+        });
+
+        function getLocation() {
+            const statusBox = document.getElementById('status-box');
+            const statusText = document.getElementById('status-text');
+            const statusIcon = document.getElementById('status-icon');
+            const detectBtn = document.getElementById('detect-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            if (navigator.geolocation) {
+                statusText.innerText = "Locating your exact device position...";
+                statusIcon.className = "fa-solid fa-spinner fa-spin text-2xl text-brand-orange mb-1";
+                statusBox.className = "p-3 bg-white/5 border border-white/15 rounded-2xl text-center transition-all duration-300";
+
+                const geoOptions = {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 0
+                };
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        setCoordinates(lat, lng, false);
+                    },
+                    (error) => {
+                        console.warn("Geolocation error:", error);
+                        statusBox.className = "p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-center backdrop-blur-md";
+                        statusIcon.className = "fa-solid fa-triangle-exclamation text-2xl text-red-400 mb-1";
+                        statusText.innerHTML = `<span class="text-red-300 font-bold">Location access required!</span><br><span class="text-[11px] text-red-400/80">Please turn on your device GPS / location services and click Allow.</span>`;
+                    },
+                    geoOptions
+                );
+            } else {
+                statusBox.className = "p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-center backdrop-blur-md";
+                statusIcon.className = "fa-solid fa-triangle-exclamation text-2xl text-red-400 mb-1";
+                statusText.innerHTML = `<span class="text-red-300 font-bold">Geolocation not supported</span><br><span class="text-[11px] text-red-400/80">Your browser does not support GPS location tracking.</span>`;
+            }
+        }
+
+        function setCoordinates(lat, lng, isCached = false) {
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+
+            localStorage.setItem('canteen_faculty_lat', lat);
+            localStorage.setItem('canteen_faculty_lng', lng);
+
+            const statusBox = document.getElementById('status-box');
+            const statusText = document.getElementById('status-text');
+            const statusIcon = document.getElementById('status-icon');
+            const detectBtn = document.getElementById('detect-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            statusBox.className = "p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center backdrop-blur-md";
+            statusIcon.className = "fa-solid fa-circle-check text-2xl text-emerald-400 mb-1";
+            const message = isCached ? "Location Verified (Saved)!" : "Location Verified Successfully!";
+            statusText.innerHTML = `<span class="text-emerald-300 font-bold">${message}</span><br><span class="text-[11px] text-emerald-400/80">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</span>`;
+
+            if (detectBtn) detectBtn.classList.add('hidden');
+            if (nextBtn) {
+                nextBtn.classList.remove('hidden');
+                nextBtn.classList.add('flex');
+            }
+        }
+    </script>
+</body>
+</html>

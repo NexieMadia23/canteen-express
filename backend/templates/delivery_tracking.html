@@ -1,0 +1,510 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="{% static 'customer_portal/images/canteen-express-logo.png' %}" type="image/png" />
+    <link rel="manifest" href="{% static 'manifest-rider.json' %}">
+    <meta name="theme-color" content="#FF6117">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Track {{ order_number }} - Canteen Express</title>
+    <link rel="stylesheet" href="{% static 'css/rider.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .map-shell { position: relative; height: 100%; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        .bg-glow {
+            background:
+                radial-gradient(600px circle at 85% 0%, rgba(255,97,23,0.14), transparent 70%),
+                radial-gradient(500px circle at 0% 100%, rgba(34,197,94,0.09), transparent 70%),
+                #0a0a0c;
+        }
+
+        /* Rotating motorcycle icon */
+        .motor-icon {
+            display: flex; align-items: center; justify-content: center;
+            width: 46px; height: 46px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff8a45, #ff6117 70%, #d94d0c);
+            color: #fff; font-size: 22px;
+            box-shadow: 0 4px 16px rgba(255,97,23,0.6);
+            will-change: transform;
+            transition: transform 1.2s cubic-bezier(.4,0,.2,1);
+        }
+        .motor-icon::after {
+            content: ''; position: absolute; top: -5px; left: 50%;
+            width: 2px; height: 12px; transform: translateX(-50%);
+            background: #fff; border-radius: 3px; opacity: 0.95;
+        }
+        .motor-icon-wrap { position: relative; width: 46px; height: 46px; }
+
+        @keyframes ping-ring { 0% { transform: scale(0.5); opacity: 0.7; } 100% { transform: scale(2.5); opacity: 0; } }
+        .ping-ring { animation: ping-ring 1.8s ease-out infinite; }
+
+        /* Floating Maxim-style bottom card slide up */
+        @keyframes slide-up { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .slide-up { animation: slide-up 0.4s ease; }
+
+        .glass-card {
+            background: rgba(16,16,20,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* Dark theme applied to the map tiles only (markers/lines stay true-color) */
+        #map .leaflet-tile-pane .leaflet-layer,
+        #map .leaflet-tile-pane .leaflet-tile {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(88%);
+        }
+        /* Ensure the map area never flashes white before tiles load */
+        #map { background: #0b0b0d !important; }
+    </style>
+</head>
+<body class="bg-glow text-zinc-100 h-dvh flex flex-col selection:bg-orange-500 selection:text-white overflow-hidden">
+
+    <!-- ===== HEADER (app-like) ===== -->
+    <header class="shrink-0 glass-card border-b border-white/5 z-20">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="{% url 'deliveries:dashboard' %}" class="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 flex items-center justify-center shrink-0 active:scale-95 transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div class="min-w-0">
+                    <h1 class="text-sm font-black text-white leading-tight truncate">Track Delivery</h1>
+                    <p class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">{{ order_number }}</p>
+                </div>
+            </div>
+            <span id="status-badge" class="shrink-0 text-[10px] font-black px-3 py-1.5 rounded-full uppercase border border-emerald-500/30 bg-emerald-500/20 text-emerald-400">
+                {{ status }}
+            </span>
+        </div>
+    </header>
+
+    <!-- ===== MAP (fills the middle) ===== -->
+    <div class="relative flex-1 min-h-0 w-full">
+        <div class="map-shell absolute inset-0">
+            <div id="map"></div>
+        </div>
+
+        <!-- Floating "moving" indicator (top-left over map) -->
+        <div id="moving-chip" class="hidden absolute top-3 left-3 z-[500] glass-card rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg">
+            <span class="relative flex h-2.5 w-2.5">
+                <span class="ping-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span class="text-[11px] font-black text-white">Rider is moving</span>
+        </div>
+
+        <!-- Floating rider name + ETA chip (top-right over map) -->
+        <div class="absolute top-3 right-3 z-[500] glass-card rounded-xl px-3 py-2 text-right shadow-lg max-w-[55%]">
+            <p class="text-xs font-black text-white truncate">{{ rider_name|default:"Rider" }}</p>
+            <p class="text-[10px] text-emerald-400 font-bold">ETA <span id="eta-val">--</span></p>
+        </div>
+    </div>
+
+    <!-- ===== MAXIM-STYLE FLOATING BOTTOM CARD ===== -->
+    <div class="shrink-0 z-20">
+        <div class="max-w-3xl mx-auto px-4 pb-4">
+            <div class="glass-card rounded-3xl p-4 slide-up shadow-2xl space-y-3">
+
+                <!-- Delivery destination row -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Delivering to</p>
+                        <p class="text-sm font-black text-white truncate">{{ delivery_location }}</p>
+                    </div>
+                </div>
+
+                <!-- Speed + Distance / Remaining -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-black/30 border border-white/5 rounded-2xl p-3 text-center">
+                        <h2 id="speed-val" class="text-2xl font-black text-orange-400 tabular-nums">--</h2>
+                        <p class="text-[9px] text-zinc-500 uppercase tracking-widest font-bold mt-0.5">Speed</p>
+                    </div>
+                    <div class="bg-black/30 border border-white/5 rounded-2xl p-3 text-center">
+                        <h2 id="dist-val" class="text-2xl font-black text-emerald-400 tabular-nums">--</h2>
+                        <p class="text-[9px] text-zinc-500 uppercase tracking-widest font-bold mt-0.5">Distance</p>
+                    </div>
+                    <div class="bg-black/30 border border-white/5 rounded-2xl p-3 text-center">
+                        <h2 id="remain-val" class="text-2xl font-black text-white tabular-nums">--</h2>
+                        <p class="text-[9px] text-zinc-500 uppercase tracking-widest font-bold mt-0.5">Remaining</p>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="space-y-1">
+                    <div class="h-2 w-full bg-zinc-800/80 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-gradient-to-r from-orange-500 to-emerald-500 rounded-full transition-all duration-700" style="width:0%"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] text-zinc-500 font-bold">
+                        <span><i class="fa-solid fa-store mr-1 text-orange-400"></i> Canteen</span>
+                        <span id="progress-pct">0%</span>
+                        <span><i class="fa-solid fa-flag-checkered mr-1 text-emerald-400"></i> {{ delivery_location }}</span>
+                    </div>
+                </div>
+
+                <p id="status-msg" class="text-center text-[11px] text-zinc-400 font-bold"></p>
+                <p id="updated-at" class="text-center text-[9px] text-zinc-600 font-bold uppercase tracking-widest">--</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DELIVERY_ID = {{ delivery.id }};
+        // PSU Main Campus (Tiniguiban Heights) - campus-only delivery scope
+        const CAMPUS_CENTER = [9.77778, 118.73333];
+        const ZOOM = 15;
+        // Interactive campus map: starts zoomed in on the campus but lets the user
+        // pan and zoom freely. Uses free OpenStreetMap tiles rendered dark via a
+        // CSS invert filter, so no attribution text shows on screen.
+        const map = L.map('map', {
+            attributionControl: false,
+            zoomControl: true,
+            scrollWheelZoom: true
+        }).setView(CAMPUS_CENTER, ZOOM);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        // Free standard tiles (requires no credentials)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            minZoom: 13,
+            attribution: ''
+        }).addTo(map);
+
+        // Campus-only delivery zone as an irregular polygon that hugs the actual
+        // PSU Main Campus footprint (instead of a perfect circle).
+        const CAMPUS_BOUNDS = [
+            [9.7815, 118.7310],
+            [9.7820, 118.7340],
+            [9.7805, 118.7375],
+            [9.7780, 118.7385],
+            [9.7755, 118.7370],
+            [9.7745, 118.7340],
+            [9.7755, 118.7315],
+            [9.7790, 118.7300],
+        ];
+        L.polygon(CAMPUS_BOUNDS, {
+            color: '#FF6117', fillColor: '#FF6117',
+            fillOpacity: 0.06, dashArray: '6 6', weight: 1.6,
+        }).addTo(map).bindTooltip('PSU Main Campus', { permanent: false, direction: 'center' });
+
+        // ===== Animated, rotating motorcycle marker =====
+        function makeMotorIcon(angle) {
+            return L.divIcon({
+                className: '',
+                iconSize: [46, 46],
+                iconAnchor: [23, 23],
+                html: `<div class="motor-icon-wrap"><div class="motor-icon" style="transform:rotate(${angle}deg)"><i class="fa-solid fa-motorcycle"></i></div></div>`
+            });
+        }
+
+        let riderMarker = null;
+        let riderIconEl = null;
+        let prevLatLng = null;
+        let destMarker = null;
+        let routeLine = null;
+        let currentHeading = 0;
+
+        // Smoothly animate the marker from its current position to a target latlng
+        function animateMarker(marker, targetLatLng, ms) {
+            const start = marker.getLatLng();
+            const t0 = performance.now();
+            function step(now) {
+                const p = Math.min(1, (now - t0) / ms);
+                const ease = 1 - Math.pow(1 - p, 3);
+                marker.setLatLng([
+                    start.lat + (targetLatLng.lat - start.lat) * ease,
+                    start.lng + (targetLatLng.lng - start.lng) * ease
+                ]);
+                if (p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        function updateMap() {
+            fetch(`/deliveries/api/location/${DELIVERY_ID}/`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+
+                    // Check searching timer
+                    currentStatus = data.status;
+                    checkSearchingTimer(data.status);
+
+                    // Destination pin
+                    if (data.dest_lat != null && data.dest_lng != null && !destMarker) {
+                        destMarker = L.marker([data.dest_lat, data.dest_lng], {
+                            icon: L.divIcon({
+                                className: '',
+                                html: '<div class="text-3xl"><i class="fa-solid fa-location-dot text-emerald-500" style="text-shadow:0 0 14px rgba(34,197,94,0.9)"></i></div>',
+                                iconSize: [30, 30], iconAnchor: [15, 28]
+                            })
+                        }).addTo(map);
+                    }
+
+                    // Rider marker: rotate icon + animate movement
+                    let hasNewPos = false;
+                    if (data.lat != null && data.lng != null) {
+                        const target = L.latLng(data.lat, data.lng);
+                        const moving = ((data.speed_kmh || 0) > 0.5);
+
+                        if (!riderMarker) {
+                            riderMarker = L.marker(target, { icon: makeMotorIcon(0) }).addTo(map);
+                            // cache the rotating element
+                            riderMarker._icon && (riderIconEl = riderMarker._icon.querySelector('.motor-icon'));
+                            prevLatLng = target;
+                        } else {
+                            // Rotate to heading (direction of travel)
+                            if (data.heading != null) {
+                                currentHeading = data.heading;
+                            }
+                            if (riderIconEl) {
+                                riderIconEl.style.transform = `rotate(${currentHeading}deg)`;
+                            }
+                            // Animate movement toward the new point (use fixed duration when moving)
+                            animateMarker(riderMarker, target, moving ? 1500 : 600);
+                        }
+                        hasNewPos = true;
+                    }
+
+                    // "moving" chip visibility
+                    const chip = document.getElementById('moving-chip');
+                    if (hasNewPos && (data.speed_kmh || 0) > 0.5) {
+                        chip.classList.remove('hidden');
+                    } else {
+                        chip.classList.add('hidden');
+                    }
+
+                    // Live route line: connects the rider to the pinned customer destination.
+                    // Updates every poll so the rider visibly "approaches" the customer's pin.
+                    if (hasNewPos && data.dest_lat != null && data.dest_lng != null) {
+                        const pts = [[data.lat, data.lng], [data.dest_lat, data.dest_lng]];
+                        if (!routeLine) {
+                            routeLine = L.polyline(pts, {
+                                color: '#FF6117', weight: 3, opacity: 0.8,
+                                dashArray: '7 6'
+                            }).addTo(map);
+                        } else {
+                            routeLine.setLatLngs(pts);
+                        }
+                    }
+
+                    // Stats
+                    document.getElementById('speed-val').textContent = formatSpeed(data.speed_kmh);
+                    document.getElementById('dist-val').textContent = formatDist(data.total_distance_km);
+                    document.getElementById('remain-val').textContent = formatDist(data.remaining_km);
+                    document.getElementById('eta-val').textContent = formatEta(data.eta_minutes);
+
+                    // Progress
+                    const traveled = data.total_distance_km || 0;
+                    const remaining = data.remaining_km;
+                    if (remaining != null && (traveled + remaining) > 0) {
+                        const pct = Math.min(100, Math.round((traveled / (traveled + remaining)) * 100));
+                        document.getElementById('progress-bar').style.width = pct + '%';
+                        document.getElementById('progress-pct').textContent = pct + '%';
+                    } else if (data.status === 'DELIVERED') {
+                        document.getElementById('progress-bar').style.width = '100%';
+                        document.getElementById('progress-pct').textContent = '100%';
+                    }
+
+                    // Status
+                    const badge = document.getElementById('status-badge');
+                    const msg = document.getElementById('status-msg');
+                    const updated = document.getElementById('updated-at');
+                    updated.textContent = data.updated_at ? 'Updated ' + data.updated_at : '--';
+
+                    if (data.status === 'DELIVERED') {
+                        msg.textContent = 'Delivery completed!';
+                        badge.textContent = 'Delivered';
+                        badge.className = 'shrink-0 text-[10px] font-black px-3 py-1.5 rounded-full uppercase border border-emerald-500/30 bg-emerald-500/20 text-emerald-400';
+                    } else if (hasNewPos) {
+                        msg.textContent = 'Rider heading to ' + (data.delivery_location || 'your location');
+                    } else {
+                        msg.textContent = 'Waiting for rider location...';
+                        document.getElementById('speed-val').textContent = '--';
+                        document.getElementById('eta-val').textContent = '--';
+                    }
+                });
+        }
+
+        function formatSpeed(v) { return v == null ? '--' : v.toFixed(0) + ''; }
+        function formatDist(v) {
+            if (v == null) return '--';
+            return (v < 1 ? (v * 1000).toFixed(0) + ' m' : v.toFixed(1) + ' km');
+        }
+        function formatEta(mins) {
+            if (mins == null) return '--';
+            if (mins < 1) return '< 1m';
+            if (mins < 60) return Math.ceil(mins) + 'm';
+            return Math.floor(mins / 60) + 'h ' + Math.round(mins % 60) + 'm';
+        }
+
+        updateMap();
+        setInterval(updateMap, 4000);
+
+        // Smart Rider Timeout Timer (2 minutes while SEARCHING) - 1-second precision tick
+        let searchingSeconds = 0;
+        let timeoutModalShown = false;
+        let currentStatus = '{{ delivery.status }}';
+        const deliveryId = {{ delivery.id }};
+
+        setInterval(() => {
+            if (currentStatus === 'SEARCHING') {
+                searchingSeconds++;
+                if (searchingSeconds >= 120 && !timeoutModalShown) {
+                    timeoutModalShown = true;
+                    const modal = document.getElementById('rider-timeout-modal');
+                    if (modal) modal.classList.remove('hidden');
+                }
+            } else {
+                searchingSeconds = 0;
+                timeoutModalShown = false;
+                const modal = document.getElementById('rider-timeout-modal');
+                if (modal) modal.classList.add('hidden');
+            }
+        }, 1000);
+
+        function checkSearchingTimer(status) {
+            currentStatus = status;
+            if (status !== 'SEARCHING') {
+                searchingSeconds = 0;
+                timeoutModalShown = false;
+                const modal = document.getElementById('rider-timeout-modal');
+                if (modal) modal.classList.add('hidden');
+            }
+        }
+
+        // Auto-refresh when PWA tab / app comes back into view
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                updateMap();
+            }
+        });
+
+        function extendSearchTimer() {
+            searchingSeconds = 0;
+            timeoutModalShown = false;
+            document.getElementById('rider-timeout-modal').classList.add('hidden');
+        }
+
+        function convertToPickup() {
+            if (!confirm("Are you sure you want to convert this delivery order to Counter Pick-up?")) return;
+            fetch(`/deliveries/api/convert-to-pickup/${deliveryId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    const modalBox = document.querySelector('#rider-timeout-modal > div');
+                    modalBox.innerHTML = `
+                        <div class="text-center pb-3 border-b border-white/10">
+                            <span class="bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider border border-amber-500/30">Converted to Walk-In</span>
+                            <h3 class="text-xl font-black text-white mt-2">Queue Slip Generated</h3>
+                        </div>
+                        <div class="space-y-1.5 py-1">
+                            <p class="text-[10px] uppercase tracking-wider text-white/60 font-bold">Your Queue Number</p>
+                            <span class="text-4xl font-black text-orange-400 tracking-tight">{{ order.order_number }}</span>
+                            <p class="text-xs text-white/80 font-medium">Counter Pick-up Mode Activated</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-2xl flex flex-col items-center justify-center">
+                            <svg id="timeout-slip-barcode" class="w-full h-14"></svg>
+                            <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Scan at Counter to Process Payment</span>
+                        </div>
+                        <button onclick="window.location.href='{% url 'customer_portal:kiosk_menu' %}'" class="w-full py-3 bg-brand-orange hover:bg-orange-600 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-brand-orange/30 transition">
+                            Done / Go to Menu
+                        </button>
+                    `;
+                    if (typeof JsBarcode !== 'undefined') {
+                        JsBarcode("#timeout-slip-barcode", "{{ order.order_number }}", {
+                            format: "CODE128",
+                            lineColor: "#111827",
+                            width: 2,
+                            height: 45,
+                            displayValue: true,
+                            fontSize: 11,
+                            margin: 0
+                        });
+                    }
+                } else {
+                    alert(data.error || "Failed to convert.");
+                }
+            });
+        }
+
+        function showCancelReasons() {
+            document.getElementById('timeout-buttons').classList.add('hidden');
+            document.getElementById('cancel-reason-container').classList.remove('hidden');
+        }
+
+        function submitCancelOrder() {
+            const reason = document.getElementById('cancel-reason-select').value;
+            fetch(`/deliveries/api/cancel-with-reason/${deliveryId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason: reason })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    alert("Order cancelled successfully.");
+                    window.location.href = "{% url 'customer_portal:kiosk_menu' %}";
+                } else {
+                    alert(data.error || "Failed to cancel.");
+                }
+            });
+        }
+    </script>
+
+    <!-- Smart Rider Timeout Modal -->
+    <div id="rider-timeout-modal" class="fixed inset-0 z-[99999] bg-black/98 backdrop-blur-3xl hidden flex items-center justify-center p-4">
+        <div style="background: rgba(18, 18, 22, 0.78); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);" class="w-full max-w-sm rounded-3xl p-6 text-center space-y-4 text-white relative z-[100000]">
+            <div class="w-14 h-14 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-xl shadow-lg">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <h3 class="text-lg font-black font-poppins text-white">No Rider Available Yet</h3>
+            <p class="text-xs text-zinc-200 leading-relaxed font-medium">
+                It's been 2 minutes and no rider has accepted your delivery request yet. What would you like to do?
+            </p>
+
+            <div id="cancel-reason-container" class="hidden space-y-2 text-left pt-2">
+                <label class="block text-[10px] font-extrabold uppercase tracking-wider text-white/70">Select cancellation reason:</label>
+                <select id="cancel-reason-select" class="w-full px-3 py-2 bg-white/5 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-orange">
+                    <option value="Waiting for too long" class="bg-zinc-900">Waiting for too long</option>
+                    <option value="No riders available" class="bg-zinc-900">No riders available</option>
+                    <option value="Change of plans" class="bg-zinc-900">Change of plans</option>
+                    <option value="Other reason" class="bg-zinc-900">Other reason</option>
+                </select>
+                <button onclick="submitCancelOrder()" class="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition cursor-pointer">
+                    Confirm Cancellation
+                </button>
+                <button onclick="document.getElementById('cancel-reason-container').classList.add('hidden'); document.getElementById('timeout-buttons').classList.remove('hidden');" class="w-full py-1.5 text-white/50 hover:text-white text-xs font-bold">
+                    Back
+                </button>
+            </div>
+
+            <div id="timeout-buttons" class="space-y-2 pt-2">
+                <button onclick="extendSearchTimer()" class="w-full py-3 bg-brand-orange hover:bg-orange-600 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-brand-orange/30 transition cursor-pointer">
+                    Wait (+2 Mins)
+                </button>
+                <button onclick="convertToPickup()" class="w-full py-3 bg-white/10 hover:bg-white/20 text-white font-black rounded-xl text-xs uppercase tracking-wider border border-white/10 transition cursor-pointer">
+                    Convert to Pick-up
+                </button>
+                <button onclick="showCancelReasons()" class="w-full py-2.5 bg-transparent hover:bg-red-500/10 text-red-400 font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer">
+                    Cancel Order
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
